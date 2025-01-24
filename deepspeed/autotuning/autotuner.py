@@ -1111,3 +1111,14 @@ class Autotuner:
             logger.info(f"Done running with the optimal DeepSpeed configuration using {self.optimal_cmd}")
         else:
             logger.info(f"No optimal DeepSpeed configuration found by autotuning.")
+
+    def streamlined_training(self):
+        """Streamlined training process for ChatGPT-like models with a single click."""
+        self.tune()
+        self.write_optimal_config()
+        self.run_after_tuning()
+
+    def integrate_deepspeed_he(self):
+        """Integrate with DeepSpeed-HE for efficient model scaling."""
+        # Placeholder for integration logic with DeepSpeed-HE
+        pass

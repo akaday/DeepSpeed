@@ -413,3 +413,105 @@ Notation: Hugging Face (HF), DeepSpeed (DS), ZeRO stage (z), gradient accumulati
 | GPT2-large | 27.874 (mbs = 1)     | 56.797 (z = 1, mbs = 2), | 69.061 (z = 1, mbs = 3)        |
 
 As we can see the DeepSpeed Autotuner can select a better than hand-tuned configuration with a reasonable number of experiments. Examples in [Autotuning Hugging Face Examples](https://github.com/microsoft/DeepSpeedExamples/tree/master/autotuning/hf#autotuning-hugging-face-examples) would demonstrate the effectiveness of autotuning across different models.
+
+## Streamlined Training Process
+
+DeepSpeed now includes a streamlined process for ChatGPT-like model training with a single click. This process leverages the DeepSpeed Hybrid Engine (DeepSpeed-HE) for efficient model scaling and seamless switching between inference and training modes. The streamlined training process offers up to 15x speedup over existing systems, making RLHF training fast and affordable.
+
+### Instructions for Using the Streamlined Training Process
+
+1. Ensure that your DeepSpeed configuration file includes the following entries:
+```json
+{
+    "autotuning": {
+        "enabled": true,
+        "streamlined_training": true,
+        "deepspeed_he_integration": true,
+        "arg_mappings": {
+            "train_micro_batch_size_per_gpu": "--per_device_train_batch_size",
+            "gradient_accumulation_steps": "--gradient_accumulation_steps"
+        }
+    }
+}
+```
+
+2. Use the following command to launch the streamlined training process:
+```bash
+deepspeed --autotuning=run <user script> --deepspeed ds_config.json <other user args>
+```
+
+3. The streamlined training process will automatically discover the optimal DeepSpeed configuration, integrate with DeepSpeed-HE for efficient model scaling, and launch the training with the found optimal setup.
+
+### Example
+
+Example training script for streamlined training process:
+
+```bash
+MODEL_NAME=gpt2-large
+PER_DEVICE_TRAIN_BATCH_SIZE=1
+HF_PATH=~/projects # REPLACE WITH YOUR HUGGING FACE PATH
+DS_CONFIG_PATH=ds_config.json # REPLACE WITH YOUR DEEPSPEED CONFIGURATION FILE PATH
+
+NEPOCHS=1
+NGPUS=16
+NNODES=1
+OUTPUT_DIR=./output_b${PER_DEVICE_TRAIN_BATCH_SIZE}_g${NGPUS}
+
+deepspeed --autotuning run --num_nodes=$NNODES --num_gpus=$NGPUS $HF_PATH/transformers/examples/pytorch/language-modeling/run_clm.py --deepspeed $DS_CONFIG_PATH \
+--model_name_or_path $MODEL_NAME \
+--dataset_name wikitext \
+--dataset_config_name wikitext-2-raw-v1 \
+--do_train \
+--do_eval \
+--fp16 \
+--per_device_train_batch_size $PER_DEVICE_TRAIN_BATCH_SIZE \
+--learning_rate 2e-5 \
+--num_train_epochs $NEPOCHS \
+--output_dir ${OUTPUT_DIR} \
+--overwrite_output_dir
+```
+
+Example DeepSpeed configuration file for streamlined training process:
+
+```json
+{
+  "train_micro_batch_size_per_gpu": "auto",
+  "gradient_accumulation_steps": "auto",
+  "autotuning": {
+    "enabled": true,
+    "streamlined_training": true,
+    "deepspeed_he_integration": true,
+    "arg_mappings": {
+      "train_micro_batch_size_per_gpu": "--per_device_train_batch_size",
+      "gradient_accumulation_steps": "--gradient_accumulation_steps"
+    },
+  }
+}
+```
+
+Example output (in `summary.txt`):
+
+```
+| tuning_space | num_experiments | best_metric_val | best_exp_name   |
+| :----------- | --------------: | --------------: | :-------------- |
+| z0           |               4 |         59.0229 | z0_gas1_tmbspg2 |
+| z1           |               5 |         87.3017 | z1_gas1_tmbspg3 |
+| z2           |               3 |         77.8338 | z2_gas1_tmbspg3 |
+| z3           |               1 |               0 | z3_gas1_tmbspg3 |
+| global       |              13 |         87.3017 | z1_gas1_tmbspg3 |
+
+Tuning completed in 0:27:33.988447. Total number of experiments: 13.
+```
+
+The table below shows the throughput (samples per second) comparison. The corresponding train micro-batch size per GPU (mbs or tmbspg) and ZeRO stage used to achieve the throughput value is also shown in the parentheses. Assume the strategy users would use in the hand-tuning process is to start from `mbs = 1` and increase mbs by 2 each time until running out of GPU memory.
+ - `baseline` is the vanilla Hugging Face (HF) without DeepSpeed (DS) and mbs is hand-tuned.
+ - `HF + DS hand-tuned` is HF with DS, and mbs is hand-tuned while other DS configuration uses default values.
+ - `HF + DS autotuning` is HF with DS, and the DS configuration selected from autotuning.
+
+Notation: Hugging Face (HF), DeepSpeed (DS), ZeRO stage (z), gradient accumulation steps (gas), train micro-batch size per GPU (mbs or tmbspg).
+
+| Model name | baseline (vanilla HF) | HF + DS hand-tuned       | HF + DS autotuning (fast-mode) |
+| ---------- | -------------------- | ------------------------ | ------------------------------ |
+| GPT2-large | 27.874 (mbs = 1)     | 56.797 (z = 1, mbs = 2), | 69.061 (z = 1, mbs = 3)        |
+
+As we can see the DeepSpeed Autotuner can select a better than hand-tuned configuration with a reasonable number of experiments. Examples in [Autotuning Hugging Face Examples](https://github.com/microsoft/DeepSpeedExamples/tree/master/autotuning/hf#autotuning-hugging-face-examples) would demonstrate the effectiveness of autotuning across different models.

@@ -22,6 +22,8 @@ class DeepSpeedAutotuningConfig(DeepSpeedConfigObject):
         self.results_dir = None
         self.exps_dir = None
         self.overwrite = None
+        self.streamlined_training = None
+        self.deepspeed_he_integration = None
 
         if param_dict and AUTOTUNING in param_dict.keys():
             autotuning_dict = param_dict[AUTOTUNING]
@@ -83,6 +85,12 @@ class DeepSpeedAutotuningConfig(DeepSpeedConfigObject):
 
         self.num_tuning_micro_batch_sizes = get_dict_param(autotuning_dict, AUTOTUNING_NUM_TUNING_MICRO_BATCH_SIZES,
                                                            AUTOTUNING_NUM_TUNING_MICRO_BATCH_SIZES_DEFAULT)
+
+        self.streamlined_training = get_scalar_param(autotuning_dict, AUTOTUNING_STREAMLINED_TRAINING,
+                                                     AUTOTUNING_STREAMLINED_TRAINING_DEFAULT)
+
+        self.deepspeed_he_integration = get_scalar_param(autotuning_dict, AUTOTUNING_DEEPSPEED_HE_INTEGRATION,
+                                                         AUTOTUNING_DEEPSPEED_HE_INTEGRATION_DEFAULT)
 
 
 def get_model_info_config(param_dict):
